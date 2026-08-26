@@ -1,130 +1,339 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Join the Dots - London</title>
 
-<link href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css" rel="stylesheet">
+<link
+    href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css"
+    rel="stylesheet"
+/>
 
 <style>
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #fff;
-    }
 
-    #map {
-        width: 100%;
-        height: 80vh;
-    }
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: white;
+}
 
-    #controls {
-        padding: 15px;
-        text-align: center;
-    }
+#map {
+    width: 100%;
+    height: 80vh;
+}
 
-    #title {
-        font-size: 24px;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
+#controls {
+    padding: 15px;
+    text-align: center;
+}
 
-    #status {
-        margin-bottom: 12px;
-    }
+#title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
 
-    button {
-        padding: 8px 16px;
-        margin: 0 4px;
-        border: 1px solid #999;
-        background: white;
-        cursor: pointer;
-        border-radius: 4px;
-    }
+#status {
+    margin-bottom: 12px;
+}
 
-    button:hover {
-        background: #eee;
-    }
+button {
+    padding: 8px 16px;
+    margin: 0 4px;
+    border: 1px solid #999;
+    background: white;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+button:hover {
+    background: #eee;
+}
+
 </style>
+
 </head>
+
 
 <body>
 
-<div id="controls">
-    <div id="title">Join the Dots: London</div>
-    <div id="status">Connect dot 1</div>
 
-    <button onclick="resetGame()">Reset</button>
-    <button onclick="reveal()">Reveal</button>
+<div id="controls">
+
+    <div id="title">
+        Join the Dots: London
+    </div>
+
+    <div id="status">
+        Connect dot 1
+    </div>
+
+    <button onclick="resetGame()">
+        Reset
+    </button>
+
+    <button onclick="reveal()">
+        Reveal
+    </button>
+
 </div>
+
 
 <div id="map"></div>
 
+
 <script src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
 
+
 <script>
+
+
+// ======================================================
+// DIFFICULTY SETTINGS
+// ======================================================
+
+const DIFFICULTIES = {
+
+    easy: 50,
+
+    medium: 100,
+
+    hard: 200
+
+};
+
+
+// Change this to:
+// "easy"
+// "medium"
+// "hard"
+
+const DIFFICULTY = "easy";
+
+
+const DOT_COUNT = DIFFICULTIES[DIFFICULTY];
+
+
+// ======================================================
+// GLOBAL VARIABLES
+// ======================================================
 
 let map;
 
 let coordinates = [];
+
+let puzzleDots = [];
+
 let currentDot = 0;
+
 let completedLine = [];
 
 
-// --------------------------------------------------
-// Load the London boundary
-// --------------------------------------------------
+// ======================================================
+// LOAD LONDON BOUNDARY
+// ======================================================
 
 fetch("londoneasy.json")
-    .then(response => response.json())
-    .then(data => {
-        console.log(data);
-        coordinates = extractCoordinates(data);
 
-        // Remove duplicate final coordinate if polygon is closed
-        if (
-            coordinates.length > 1 &&
-            coordinates[0][0] === coordinates[coordinates.length - 1][0] &&
-            coordinates[0][1] === coordinates[coordinates.length - 1][1]
-        ) {
-            coordinates.pop();
+    .then(response => {
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Could not load londoneasy.json"
+            );
+
         }
 
+        return response.json();
+
+    })
+
+    .then(data => {
+
+        console.log("GeoJSON:", data);
+
+        // Extract the original 1,493-point boundary
+        coordinates = extractCoordinates(data);
+
+        console.log(
+            "Original boundary points:",
+            coordinates.length
+        );
+
+
+        // Create the actual puzzle dots
+        puzzleDots = createPuzzleDots(
+            coordinates,
+            DOT_COUNT
+        );
+
+
+        console.log(
+            "Puzzle dots:",
+            puzzleDots.length
+        );
+
+
+        // Start the map
         initialiseMap();
+
+    })
+
+    .catch(error => {
+
+        console.error(error);
+
+        document.getElementById("status").innerText =
+            "Error loading London boundary";
 
     });
 
 
-
-// --------------------------------------------------
-// Extract polygon coordinates
-// --------------------------------------------------
+// ======================================================
+// EXTRACT COORDINATES FROM GEOJSON
+// ======================================================
 
 function extractCoordinates(data) {
+
+    // Mapshaper exported a GeometryCollection
 
     if (data.type === "GeometryCollection") {
 
         const geometry = data.geometries[0];
 
         if (geometry.type === "LineString") {
+
             return geometry.coordinates;
+
         }
 
     }
 
+
+    // Also support a normal LineString
+
     if (data.type === "LineString") {
+
         return data.coordinates;
+
     }
 
-    throw new Error("Unsupported GeoJSON structure: " + data.type);
+
+    // Support a FeatureCollection just in case
+
+    if (data.type === "FeatureCollection") {
+
+        const feature = data.features[0];
+
+        if (!feature) {
+
+            throw new Error(
+                "No features found in GeoJSON"
+            );
+
+        }
+
+        const geometry = feature.geometry;
+
+
+        if (geometry.type === "LineString") {
+
+            return geometry.coordinates;
+
+        }
+
+    }
+
+
+    throw new Error(
+        "Unsupported GeoJSON structure: " +
+        data.type
+    );
+
 }
-    
-// --------------------------------------------------
-// Create MapLibre map
-// --------------------------------------------------
+
+
+// ======================================================
+// CREATE EVENLY SPACED PUZZLE DOTS
+// ======================================================
+
+function createPuzzleDots(
+    coordinates,
+    dotCount
+) {
+
+    // Close the boundary
+    // by adding the first coordinate to the end
+
+    const closedCoordinates = [
+        ...coordinates,
+        coordinates[0]
+    ];
+
+
+    // Convert to Turf LineString
+
+    const line = turf.lineString(
+        closedCoordinates
+    );
+
+
+    // Measure complete boundary
+
+    const totalLength = turf.length(
+        line,
+        {
+            units: "kilometers"
+        }
+    );
+
+
+    const dots = [];
+
+
+    // Place dots at equal distances
+
+    for (
+        let i = 0;
+        i < dotCount;
+        i++
+    ) {
+
+        const distance =
+            (totalLength * i) / dotCount;
+
+
+        const point = turf.along(
+            line,
+            distance,
+            {
+                units: "kilometers"
+            }
+        );
+
+
+        dots.push(
+            point.geometry.coordinates
+        );
+
+    }
+
+
+    return dots;
+
+}
+
+
+// ======================================================
+// INITIALISE MAP
+// ======================================================
 
 function initialiseMap() {
 
@@ -132,45 +341,83 @@ function initialiseMap() {
 
         container: "map",
 
-        style: "https://tiles.openfreemap.org/styles/positron",
+        style:
+            "https://tiles.openfreemap.org/styles/positron",
 
-        center: [-0.1276, 51.5072],
+        center: [
+            -0.1276,
+            51.5072
+        ],
 
         zoom: 9
 
     });
 
 
+    map.addControl(
+        new maplibregl.NavigationControl(),
+        "top-right"
+    );
+
+
     map.on("load", () => {
 
-        // --------------------------------------------------
-        // Dot source
-        // --------------------------------------------------
+
+        // ==================================================
+        // CREATE DOT DATA
+        // ==================================================
 
         const dots = {
+
             type: "FeatureCollection",
-            features: coordinates.map((coord, index) => ({
-                type: "Feature",
-                geometry: {
-                    type: "Point",
-                    coordinates: coord
-                },
-                properties: {
-                    number: index + 1
-                }
-            }))
+
+            features:
+
+                puzzleDots.map(
+                    (coord, index) => ({
+
+                        type: "Feature",
+
+                        geometry: {
+
+                            type: "Point",
+
+                            coordinates: coord
+
+                        },
+
+                        properties: {
+
+                            number:
+                                index + 1
+
+                        }
+
+                    })
+                )
+
         };
 
 
-        map.addSource("dots", {
-            type: "geojson",
-            data: dots
-        });
+        // ==================================================
+        // ADD DOT SOURCE
+        // ==================================================
+
+        map.addSource(
+            "dots",
+            {
+
+                type: "geojson",
+
+                data: dots
+
+            }
+        );
 
 
-        // --------------------------------------------------
-        // Dot circles
-        // --------------------------------------------------
+        // ==================================================
+        // DOT CIRCLES
+        // ==================================================
 
         map.addLayer({
 
@@ -182,11 +429,12 @@ function initialiseMap() {
 
             paint: {
 
-                "circle-radius": 7,
+                "circle-radius": 8,
 
                 "circle-color": "#ffffff",
 
-                "circle-stroke-color": "#000000",
+                "circle-stroke-color":
+                    "#000000",
 
                 "circle-stroke-width": 1.5
 
@@ -195,9 +443,9 @@ function initialiseMap() {
         });
 
 
-        // --------------------------------------------------
-        // Dot numbers
-        // --------------------------------------------------
+        // ==================================================
+        // DOT NUMBERS
+        // ==================================================
 
         map.addLayer({
 
@@ -209,13 +457,16 @@ function initialiseMap() {
 
             layout: {
 
-                "text-field": ["get", "number"],
+                "text-field":
+                    ["get", "number"],
 
-                "text-size": 11,
+                "text-size": 10,
 
                 "text-font": [
                     "Noto Sans Regular"
-                ]
+                ],
+
+                "text-allow-overlap": true
 
             },
 
@@ -228,21 +479,35 @@ function initialiseMap() {
         });
 
 
-        // --------------------------------------------------
-        // Line source
-        // --------------------------------------------------
+        // ==================================================
+        // ANSWER LINE SOURCE
+        // ==================================================
 
-        map.addSource("answer-line", {
+        map.addSource(
 
-            type: "geojson",
+            "answer-line",
 
-            data: {
-                type: "FeatureCollection",
-                features: []
+            {
+
+                type: "geojson",
+
+                data: {
+
+                    type:
+                        "FeatureCollection",
+
+                    features: []
+
+                }
+
             }
 
-        });
+        );
 
+
+        // ==================================================
+        // ANSWER LINE
+        // ==================================================
 
         map.addLayer({
 
@@ -254,7 +519,8 @@ function initialiseMap() {
 
             paint: {
 
-                "line-color": "#000000",
+                "line-color":
+                    "#000000",
 
                 "line-width": 2
 
@@ -263,84 +529,167 @@ function initialiseMap() {
         });
 
 
-        // --------------------------------------------------
-        // Click dots
-        // --------------------------------------------------
+        // ==================================================
+        // CLICK DOTS
+        // ==================================================
 
-        map.on("click", "dot-circles", handleDotClick);
-
-        map.on("mouseenter", "dot-circles", () => {
-            map.getCanvas().style.cursor = "pointer";
-        });
-
-        map.on("mouseleave", "dot-circles", () => {
-            map.getCanvas().style.cursor = "";
-        });
+        map.on(
+            "click",
+            "dot-circles",
+            handleDotClick
+        );
 
 
-        // Fit map to London
+        // Cursor
 
-        const bbox = turf.bbox(turf.lineString(coordinates));
+        map.on(
+            "mouseenter",
+            "dot-circles",
+            () => {
 
-        map.fitBounds(bbox, {
-            padding: 50
-        });
+                map.getCanvas().style.cursor =
+                    "pointer";
+
+            }
+        );
+
+
+        map.on(
+            "mouseleave",
+            "dot-circles",
+            () => {
+
+                map.getCanvas().style.cursor =
+                    "";
+
+            }
+        );
+
+
+        // ==================================================
+        // FIT MAP TO LONDON
+        // ==================================================
+
+        const bbox = turf.bbox(
+
+            turf.lineString(
+                coordinates
+            )
+
+        );
+
+
+        map.fitBounds(
+
+            bbox,
+
+            {
+
+                padding: 50
+
+            }
+
+        );
 
     });
 
 }
 
 
-// --------------------------------------------------
-// Handle clicking a dot
-// --------------------------------------------------
+// ======================================================
+// HANDLE DOT CLICK
+// ======================================================
 
 function handleDotClick(e) {
 
-    const number = e.features[0].properties.number;
+    const number =
+        Number(
+            e.features[0].properties.number
+        );
+
 
     // Correct dot
-    if (number === currentDot + 1) {
+
+    if (
+        number ===
+        currentDot + 1
+    ) {
 
         currentDot++;
 
-        completedLine.push(coordinates[number - 1]);
+
+        // Add the clicked dot
+
+        completedLine.push(
+            puzzleDots[number - 1]
+        );
+
 
         updateLine();
 
-        if (currentDot === coordinates.length) {
 
-            // Close the boundary by connecting the final dot to dot 1
-            completedLine.push(coordinates[0]);
+        // Puzzle completed
+
+        if (
+            currentDot ===
+            puzzleDots.length
+        ) {
+
+
+            // Close the boundary
+
+            completedLine.push(
+                puzzleDots[0]
+            );
+
 
             updateLine();
 
-            document.getElementById("status").innerHTML =
+
+            document.getElementById(
+                "status"
+            ).innerHTML =
+
                 "<strong>🎉 London complete!</strong>";
 
-        } else {
 
-            document.getElementById("status").innerText =
-                "Connect dot " + (currentDot + 1);
+        }
+
+        else {
+
+            document.getElementById(
+                "status"
+            ).innerText =
+
+                "Connect dot " +
+                (currentDot + 1);
 
         }
 
     }
 
+
     // Wrong dot
+
     else {
 
-        document.getElementById("status").innerText =
-            "That's dot " + number +
-            ". Connect dot " + (currentDot + 1);
+        document.getElementById(
+            "status"
+        ).innerText =
+
+            "That's dot " +
+            number +
+            ". Connect dot " +
+            (currentDot + 1);
 
     }
 
 }
 
-// --------------------------------------------------
-// Update connecting line
-// --------------------------------------------------
+
+// ======================================================
+// UPDATE CONNECTING LINE
+// ======================================================
 
 function updateLine() {
 
@@ -352,7 +701,8 @@ function updateLine() {
 
             type: "LineString",
 
-            coordinates: completedLine
+            coordinates:
+                completedLine
 
         },
 
@@ -361,20 +711,25 @@ function updateLine() {
     };
 
 
-    map.getSource("answer-line").setData({
+    map.getSource(
+        "answer-line"
+    ).setData({
 
-        type: "FeatureCollection",
+        type:
+            "FeatureCollection",
 
-        features: [line]
+        features: [
+            line
+        ]
 
     });
 
 }
 
 
-// --------------------------------------------------
-// Reset
-// --------------------------------------------------
+// ======================================================
+// RESET GAME
+// ======================================================
 
 function resetGame() {
 
@@ -382,38 +737,57 @@ function resetGame() {
 
     completedLine = [];
 
-    map.getSource("answer-line").setData({
 
-        type: "FeatureCollection",
+    map.getSource(
+        "answer-line"
+    ).setData({
+
+        type:
+            "FeatureCollection",
 
         features: []
 
     });
 
-    document.getElementById("status").innerText =
+
+    document.getElementById(
+        "status"
+    ).innerText =
         "Connect dot 1";
 
 }
 
 
-// --------------------------------------------------
-// Reveal
-// --------------------------------------------------
+// ======================================================
+// REVEAL
+// ======================================================
 
 function reveal() {
 
-    completedLine = [...coordinates];
+    completedLine = [
+        ...puzzleDots,
+        puzzleDots[0]
+    ];
 
-    currentDot = coordinates.length;
+
+    currentDot =
+        puzzleDots.length;
+
 
     updateLine();
 
-    document.getElementById("status").innerHTML =
+
+    document.getElementById(
+        "status"
+    ).innerHTML =
+
         "<strong>London revealed!</strong>";
 
 }
 
+
 </script>
 
 </body>
+
 </html>
