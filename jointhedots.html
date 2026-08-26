@@ -81,7 +81,7 @@ let completedLine = [];
 fetch("londoneasy.json")
     .then(response => response.json())
     .then(data => {
-
+        console.log(data);
         coordinates = extractCoordinates(data);
 
         // Remove duplicate final coordinate if polygon is closed
@@ -98,44 +98,62 @@ fetch("londoneasy.json")
     });
 
 
+
 // --------------------------------------------------
 // Extract polygon coordinates
 // --------------------------------------------------
 
 function extractCoordinates(data) {
 
-    const geometry = data.features[0].geometry;
+    console.log("GeoJSON:", data);
 
-    if (geometry.type === "LineString") {
-        return geometry.coordinates;
+    // Standard GeoJSON FeatureCollection
+    if (data.type === "FeatureCollection") {
+
+        const feature = data.features[0];
+
+        if (!feature) {
+            throw new Error("No features found in GeoJSON");
+        }
+
+        const geometry = feature.geometry;
+
+        if (geometry.type === "LineString") {
+            return geometry.coordinates;
+        }
+
+        if (geometry.type === "Polygon") {
+            return geometry.coordinates[0];
+        }
+
+        if (geometry.type === "MultiLineString") {
+            return geometry.coordinates.flat();
+        }
+
+        if (geometry.type === "MultiPolygon") {
+            return geometry.coordinates[0][0];
+        }
     }
 
-    if (geometry.type === "Polygon") {
-        return geometry.coordinates[0];
+    // Standard GeoJSON Feature
+    if (data.type === "Feature") {
+
+        const geometry = data.geometry;
+
+        if (geometry.type === "LineString") {
+            return geometry.coordinates;
+        }
+
+        if (geometry.type === "Polygon") {
+            return geometry.coordinates[0];
+        }
     }
 
-    if (geometry.type === "MultiPolygon") {
-
-        let largest = geometry.coordinates[0][0];
-
-        geometry.coordinates.forEach(polygon => {
-
-            const ring = polygon[0];
-
-            if (ring.length > largest.length) {
-                largest = ring;
-            }
-
-        });
-
-        return largest;
-    }
-
-    console.error("Unsupported geometry:", geometry.type);
-
-    return [];
+    throw new Error(
+        "Unsupported GeoJSON structure: " + data.type
+    );
 }
-
+    
 // --------------------------------------------------
 // Create MapLibre map
 // --------------------------------------------------
