@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Join the Dots - London</title>
+
+<link href="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css" rel="stylesheet">
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #fff;
+    }
+
+    #map {
+        width: 100%;
+        height: 80vh;
+    }
+
+    #controls {
+        padding: 15px;
+        text-align: center;
+    }
+
+    #title {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    #status {
+        margin-bottom: 12px;
+    }
+
+    button {
+        padding: 8px 16px;
+        margin: 0 4px;
+        border: 1px solid #999;
+        background: white;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    button:hover {
+        background: #eee;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="controls">
+    <div id="title">Join the Dots: London</div>
+    <div id="status">Connect dot 1</div>
+
+    <button onclick="resetGame()">Reset</button>
+    <button onclick="reveal()">Reveal</button>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+
+<script>
+
+let map;
+
+let coordinates = [];
+let currentDot = 0;
+let completedLine = [];
+
+
+// --------------------------------------------------
+// Load the London boundary
+// --------------------------------------------------
+
+fetch("londoneasy.json")
+    .then(response => response.json())
+    .then(data => {
+
+        coordinates = extractCoordinates(data);
+
+        // Remove duplicate final coordinate if polygon is closed
+        if (
+            coordinates.length > 1 &&
+            coordinates[0][0] === coordinates[coordinates.length - 1][0] &&
+            coordinates[0][1] === coordinates[coordinates.length - 1][1]
+        ) {
+            coordinates.pop();
+        }
+
+        initialiseMap();
+
+    });
+
+
+// --------------------------------------------------
+// Extract polygon coordinates
+// --------------------------------------------------
+
+function extractCoordinates(data) {
+
+    const geometry = data.features[0].geometry;
+
+    if (geometry.type === "Polygon") {
+
+        // Use the outer ring
+        return geometry.coordinates[0];
+
+    }
+
+    if (geometry.type === "MultiPolygon") {
+
+        // Find largest polygon
+        let largest = geometry.coordinates[0][0];
+
+        geometry.coordinates.forEach(polygon => {
+
+            const ring = polygon[0];
+
+            if (ring.length > largest.length) {
+                largest = ring;
+            }
+
+        });
+
+        return largest;
+    }
+
+    console.error("Unsupported geometry:", geometry.type);
+
+    return [];
+}
+
+
+// --------------------------------------------------
+// Create MapLibre map
+// --------------------------------------------------
+
+function initialiseMap() {
+
+    map = new maplibregl.Map({
+
+        container: "map",
+
+        style: "https://tiles.openfreemap.org/styles/positron",
+
+        center: [-0.1276, 51.5072],
+
+        zoom: 9
+
+    });
+
+
+    map.on("load", () => {
+
+        // --------------------------------------------------
+        // Dot source
+        // --------------------------------------------------
+
+        const dots = {
+            type: "FeatureCollection",
+            features: coordinates.map((coord, index) => ({
+                type: "Feature",
+                geometry: {
+                    type: "Point",
+                    coordinates: coord
+                },
+                properties: {
+                    number: index + 1
+                }
+            }))
+        };
+
+
+        map.addSource("dots", {
+            type: "geojson",
+            data: dots
+        });
+
+
+        // --------------------------------------------------
+        // Dot circles
+        // --------------------------------------------------
+
+        map.addLayer({
+
+            id: "dot-circles",
+
+            type: "circle",
+
+            source: "dots",
+
+            paint: {
+
+                "circle-radius": 7,
+
+                "circle-color": "#ffffff",
+
+                "circle-stroke-color": "#000000",
+
+                "circle-stroke-width": 1.5
+
+            }
+
+        });
+
+
+        // --------------------------------------------------
+        // Dot numbers
+        // --------------------------------------------------
+
+        map.addLayer({
+
+            id: "dot-numbers",
+
+            type: "symbol",
+
+            source: "dots",
+
+            layout: {
+
+                "text-field": ["get", "number"],
+
+                "text-size": 11,
+
+                "text-font": [
+                    "Noto Sans Regular"
+                ]
+
+            },
+
+            paint: {
+
+                "text-color": "#000000"
+
+            }
+
+        });
+
+
+        // --------------------------------------------------
+        // Line source
+        // --------------------------------------------------
+
+        map.addSource("answer-line", {
+
+            type: "geojson",
+
+            data: {
+                type: "FeatureCollection",
+                features: []
+            }
+
+        });
+
+
+        map.addLayer({
+
+            id: "answer-line",
+
+            type: "line",
+
+            source: "answer-line",
+
+            paint: {
+
+                "line-color": "#000000",
+
+                "line-width": 2
+
+            }
+
+        });
+
+
+        // --------------------------------------------------
+        // Click dots
+        // --------------------------------------------------
+
+        map.on("click", "dot-circles", handleDotClick);
+
+        map.on("mouseenter", "dot-circles", () => {
+            map.getCanvas().style.cursor = "pointer";
+        });
+
+        map.on("mouseleave", "dot-circles", () => {
+            map.getCanvas().style.cursor = "";
+        });
+
+
+        // Fit map to London
+
+        const bbox = turf.bbox(turf.lineString(coordinates));
+
+        map.fitBounds(bbox, {
+            padding: 50
+        });
+
+    });
+
+}
+
+
+// --------------------------------------------------
+// Handle clicking a dot
+// --------------------------------------------------
+
+function handleDotClick(e) {
+
+    const number = e.features[0].properties.number;
+
+    // Correct dot
+    if (number === currentDot + 1) {
+
+        currentDot++;
+
+        completedLine.push(coordinates[number - 1]);
+
+        updateLine();
+
+        if (currentDot === coordinates.length) {
+
+            document.getElementById("status").innerHTML =
+                "<strong>🎉 London complete!</strong>";
+
+        } else {
+
+            document.getElementById("status").innerText =
+                "Connect dot " + (currentDot + 1);
+
+        }
+
+    }
+
+    // Wrong dot
+    else {
+
+        document.getElementById("status").innerText =
+            "That's dot " + number + ". Connect dot " + (currentDot + 1);
+
+    }
+
+}
+
+
+// --------------------------------------------------
+// Update connecting line
+// --------------------------------------------------
+
+function updateLine() {
+
+    const line = {
+
+        type: "Feature",
+
+        geometry: {
+
+            type: "LineString",
+
+            coordinates: completedLine
+
+        },
+
+        properties: {}
+
+    };
+
+
+    map.getSource("answer-line").setData({
+
+        type: "FeatureCollection",
+
+        features: [line]
+
+    });
+
+}
+
+
+// --------------------------------------------------
+// Reset
+// --------------------------------------------------
+
+function resetGame() {
+
+    currentDot = 0;
+
+    completedLine = [];
+
+    map.getSource("answer-line").setData({
+
+        type: "FeatureCollection",
+
+        features: []
+
+    });
+
+    document.getElementById("status").innerText =
+        "Connect dot 1";
+
+}
+
+
+// --------------------------------------------------
+// Reveal
+// --------------------------------------------------
+
+function reveal() {
+
+    completedLine = [...coordinates];
+
+    currentDot = coordinates.length;
+
+    updateLine();
+
+    document.getElementById("status").innerHTML =
+        "<strong>London revealed!</strong>";
+
+}
+
+</script>
+
+</body>
+</html>
