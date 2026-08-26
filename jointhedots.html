@@ -54,6 +54,32 @@ button:hover {
     background: #eee;
 }
 
+.dot-number {
+    width: 16px;
+    height: 16px;
+
+    border-radius: 50%;
+
+    background: white;
+
+    border: 1.5px solid black;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-family: Arial, sans-serif;
+
+    font-size: 9px;
+
+    color: black;
+
+    box-sizing: border-box;
+
+    pointer-events: none;
+}    
 </style>
 
 </head>
@@ -139,7 +165,7 @@ let completedLine = [];
 // LOAD LONDON BOUNDARY
 // ======================================================
 
-fetch("londoneasy.json")
+fetch("https://mapsmania.github.io/jointhedots/londoneasy.json")
 
     .then(response => {
 
@@ -338,20 +364,13 @@ function createPuzzleDots(
 function initialiseMap() {
 
     map = new maplibregl.Map({
-
-        container: "map",
-
-        style:
-            "https://tiles.openfreemap.org/styles/positron",
-
-        center: [
-            -0.1276,
-            51.5072
-        ],
-
-        zoom: 9
-
-    });
+    container: "map",
+    style: {
+        version: 8,
+        sources: {},
+        layers: []
+    }
+});
 
 
     map.addControl(
@@ -447,37 +466,21 @@ function initialiseMap() {
         // DOT NUMBERS
         // ==================================================
 
-        map.addLayer({
+        puzzleDots.forEach((coord, index) => {
 
-            id: "dot-numbers",
+    const el = document.createElement("div");
 
-            type: "symbol",
+    el.className = "dot-number";
 
-            source: "dots",
+    el.innerText = index + 1;
 
-            layout: {
+    new maplibregl.Marker({
+        element: el
+    })
+    .setLngLat(coord)
+    .addTo(map);
 
-                "text-field":
-                    ["get", "number"],
-
-                "text-size": 10,
-
-                "text-font": [
-                    "Noto Sans Regular"
-                ],
-
-                "text-allow-overlap": true
-
-            },
-
-            paint: {
-
-                "text-color": "#000000"
-
-            }
-
-        });
-
+});
 
         // ==================================================
         // ANSWER LINE SOURCE
