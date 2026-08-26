@@ -106,16 +106,16 @@ function extractCoordinates(data) {
 
     const geometry = data.features[0].geometry;
 
+    if (geometry.type === "LineString") {
+        return geometry.coordinates;
+    }
+
     if (geometry.type === "Polygon") {
-
-        // Use the outer ring
         return geometry.coordinates[0];
-
     }
 
     if (geometry.type === "MultiPolygon") {
 
-        // Find largest polygon
         let largest = geometry.coordinates[0][0];
 
         geometry.coordinates.forEach(polygon => {
@@ -135,7 +135,6 @@ function extractCoordinates(data) {
 
     return [];
 }
-
 
 // --------------------------------------------------
 // Create MapLibre map
@@ -325,6 +324,11 @@ function handleDotClick(e) {
 
         if (currentDot === coordinates.length) {
 
+            // Close the boundary by connecting the final dot to dot 1
+            completedLine.push(coordinates[0]);
+
+            updateLine();
+
             document.getElementById("status").innerHTML =
                 "<strong>🎉 London complete!</strong>";
 
@@ -341,12 +345,12 @@ function handleDotClick(e) {
     else {
 
         document.getElementById("status").innerText =
-            "That's dot " + number + ". Connect dot " + (currentDot + 1);
+            "That's dot " + number +
+            ". Connect dot " + (currentDot + 1);
 
     }
 
 }
-
 
 // --------------------------------------------------
 // Update connecting line
