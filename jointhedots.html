@@ -105,53 +105,21 @@ fetch("londoneasy.json")
 
 function extractCoordinates(data) {
 
-    console.log("GeoJSON:", data);
+    if (data.type === "GeometryCollection") {
 
-    // Standard GeoJSON FeatureCollection
-    if (data.type === "FeatureCollection") {
-
-        const feature = data.features[0];
-
-        if (!feature) {
-            throw new Error("No features found in GeoJSON");
-        }
-
-        const geometry = feature.geometry;
+        const geometry = data.geometries[0];
 
         if (geometry.type === "LineString") {
             return geometry.coordinates;
         }
 
-        if (geometry.type === "Polygon") {
-            return geometry.coordinates[0];
-        }
-
-        if (geometry.type === "MultiLineString") {
-            return geometry.coordinates.flat();
-        }
-
-        if (geometry.type === "MultiPolygon") {
-            return geometry.coordinates[0][0];
-        }
     }
 
-    // Standard GeoJSON Feature
-    if (data.type === "Feature") {
-
-        const geometry = data.geometry;
-
-        if (geometry.type === "LineString") {
-            return geometry.coordinates;
-        }
-
-        if (geometry.type === "Polygon") {
-            return geometry.coordinates[0];
-        }
+    if (data.type === "LineString") {
+        return data.coordinates;
     }
 
-    throw new Error(
-        "Unsupported GeoJSON structure: " + data.type
-    );
+    throw new Error("Unsupported GeoJSON structure: " + data.type);
 }
     
 // --------------------------------------------------
