@@ -1,0 +1,1659 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>The Coastline Paradox</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+
+
+<style>
+
+/* =====================================================
+   PAGE
+===================================================== */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    color: #222;
+
+    background: #fff;
+}
+
+
+/* =====================================================
+   MAIN LAYOUT
+===================================================== */
+
+#container {
+
+    display: grid;
+
+    grid-template-columns:
+        65% 35%;
+
+    width: 100%;
+
+}
+
+
+/* =====================================================
+   FIXED MAP
+===================================================== */
+
+#map-container {
+    position: sticky;
+    top: 0;
+
+    height: 100vh;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #fafafa;
+
+    border-right: 1px solid #ddd;
+
+    overflow: hidden;
+}
+
+#map {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    max-width: 100%;
+
+    margin: 0 auto;
+
+    background: transparent;
+}
+
+/* =====================================================
+   SCROLLING STORY
+===================================================== */
+
+#story {
+
+    padding:
+        0 45px;
+
+}
+
+
+.step {
+
+    min-height: 100vh;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    padding:
+        60px 0;
+
+}
+
+
+.step h1 {
+
+    font-size: 36px;
+
+    line-height: 1.05;
+
+    margin:
+        0 0 25px 0;
+
+    letter-spacing:
+        -1.5px;
+
+}
+
+
+.step h2 {
+
+    font-size: 30px;
+
+    line-height: 1.1;
+
+    margin:
+        0 0 25px 0;
+
+}
+
+
+.step p {
+
+    font-size: 19px;
+
+    line-height: 1.6;
+
+    color: #555;
+
+    margin:
+        0 0 20px 0;
+
+}
+
+
+.step .number {
+
+    font-size: 54px;
+
+    font-weight: bold;
+
+    line-height: 1;
+
+    margin:
+        25px 0 10px 0;
+
+}
+
+
+.step .points {
+
+    font-size: 16px;
+
+    color: #777;
+
+}
+
+
+/* =====================================================
+   INTRO
+===================================================== */
+
+.intro h1 {
+
+    font-size: 32px;
+
+}
+
+
+.scroll-message {
+
+    margin-top: 45px;
+
+    font-size: 15px;
+
+    font-weight: bold;
+
+    color: #777;
+
+}
+
+
+/* =====================================================
+   FINAL SECTION
+===================================================== */
+
+.final {
+
+    min-height: 100vh;
+
+}
+
+
+.final strong {
+
+    color: #222;
+
+}
+
+
+/* =====================================================
+   SVG
+===================================================== */
+
+.actual-coastline {
+
+    fill: none;
+
+    stroke: #d5d5d5;
+
+    stroke-width: 1.5;
+
+}
+
+
+.measurement-line {
+
+    fill: none;
+
+    stroke: #111;
+
+    stroke-width: 1.8;
+
+}
+
+
+.measurement-dot {
+
+    fill: #fff;
+
+    stroke: #111;
+
+    stroke-width: 1.2;
+
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 800px) {
+
+    #container {
+
+        display: block;
+
+    }
+
+
+    #map-container {
+
+        position: sticky;
+
+        top: 0;
+
+        height: 55vh;
+
+        border-right: none;
+
+        border-bottom:
+            1px solid #ddd;
+
+        z-index: 10;
+
+    }
+
+
+    #story {
+
+        padding:
+            0 25px;
+
+    }
+
+
+    .step {
+
+        min-height: 80vh;
+
+    }
+
+
+    .step h1 {
+
+        font-size: 38px;
+
+    }
+
+
+    .step h2 {
+
+        font-size: 30px;
+
+    }
+
+
+    .step p {
+
+        font-size: 17px;
+
+    }
+
+
+    .step .number {
+
+        font-size: 44px;
+
+    }
+
+}
+
+.freeplay {
+    padding-bottom: 100px;
+}
+
+.freeplay-distance {
+    font-size: 56px;
+    font-weight: bold;
+    line-height: 1;
+    margin: 30px 0 8px 0;
+}
+
+.freeplay-points {
+    color: #777;
+    margin-bottom: 30px;
+}
+
+#freeplay-slider {
+    width: 100%;
+    cursor: pointer;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #888;
+}        
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div id="container">
+
+
+<!-- =================================================
+     MAP
+================================================== -->
+
+<div id="map-container">
+
+    <svg
+        id="map"
+        viewBox="0 0 1000 650"
+        preserveAspectRatio="xMidYMid meet">
+    </svg>
+
+</div>
+
+
+
+<!-- =================================================
+     STORY
+================================================== -->
+
+<div id="story">
+
+
+<!-- =================================================
+     STEP 1
+================================================== -->
+
+<section
+    class="step intro"
+    data-points="50">
+
+    <h1>
+        The Coastline Paradox
+    </h1>
+
+
+    <h2>
+        How long is a coastline?
+    </h2>
+
+
+    <p>
+        The answer depends on how closely
+        you measure it.
+    </p>
+
+
+    <p>
+        This map of Great Britain's coast
+        currently has just
+        <strong>50 measurement points</strong>.
+    </p>
+
+
+    <p>
+        Measuring the total distance between
+        these points gives us a coastline
+        <strong>3,351 km long</strong>.
+    </p>
+
+
+    <p>
+        But what would happen if we increased
+        the number of measurement points?
+    </p>
+
+
+    <div class="scroll-message">
+        ↓ Scroll down to find out
+    </div>
+
+</section>
+
+
+
+<!-- =================================================
+     STEP 2
+================================================== -->
+
+<section
+    class="step"
+    data-points="100">
+
+    <h2>
+        Let's measure it more closely
+    </h2>
+
+
+    <p>
+        We've doubled the number of
+        measurement points to
+        <strong>100</strong>.
+    </p>
+
+
+    <p>
+        The measuring line can now follow
+        the coastline more closely, capturing
+        smaller bays and headlands.
+    </p>
+
+
+    <div
+        class="number"
+        data-distance>
+        —
+    </div>
+
+
+    <div class="points">
+        100 measurement points
+    </div>
+
+</section>
+
+
+
+<!-- =================================================
+     STEP 3
+================================================== -->
+
+<section
+    class="step"
+    data-points="250">
+
+    <h2>
+        More points, more coastline
+    </h2>
+
+
+    <p>
+        Now we're using
+        <strong>250 measurement points</strong>.
+    </p>
+
+
+    <p>
+        As the points get closer together,
+        the straight lines between them
+        capture more of the coastline's
+        irregularities.
+    </p>
+
+
+    <div
+        class="number"
+        data-distance>
+        —
+    </div>
+
+
+    <div class="points">
+        250 measurement points
+    </div>
+
+</section>
+
+
+
+<!-- =================================================
+     STEP 4
+================================================== -->
+
+<section
+    class="step"
+    data-points="500">
+
+    <h2>
+        The coastline gets longer
+    </h2>
+
+
+    <p>
+        With
+        <strong>500 points</strong>,
+        the measurement follows even more
+        of Britain's bays and headlands.
+    </p>
+
+
+    <p>
+        And the measured coastline continues
+        to grow.
+    </p>
+
+
+    <div
+        class="number"
+        data-distance>
+        —
+    </div>
+
+
+    <div class="points">
+        500 measurement points
+    </div>
+
+</section>
+
+
+
+<!-- =================================================
+     STEP 5
+================================================== -->
+
+<section
+    class="step"
+    data-points="1000">
+
+    <h2>
+        Zooming in
+    </h2>
+
+
+    <p>
+        At
+        <strong>1,000 measurement points</strong>,
+        our measuring intervals are much
+        smaller.
+    </p>
+
+
+    <p>
+        The line now hugs the coastline
+        much more closely.
+    </p>
+
+
+    <div
+        class="number"
+        data-distance>
+        —
+    </div>
+
+
+    <div class="points">
+        1,000 measurement points
+    </div>
+
+</section>
+
+
+
+<!-- =================================================
+     STEP 6
+================================================== -->
+
+<section
+    class="step"
+    data-points="2500">
+
+    <h2>
+        And it keeps growing
+    </h2>
+
+
+    <p>
+        We've now increased the resolution
+        to <strong>2,500 points</strong>.
+    </p>
+
+
+    <p>
+        Yet Great Britain's coastline
+        hasn't changed.
+    </p>
+
+
+    <p>
+        <strong>
+            Our measurement has.
+        </strong>
+    </p>
+
+
+    <div
+        class="number"
+        data-distance>
+        —
+    </div>
+
+
+    <div class="points">
+        2,500 measurement points
+    </div>
+
+</section>
+
+
+
+<!-- =================================================
+     STEP 7
+================================================== -->
+
+<section
+    class="step"
+    data-points="5000">
+
+    <h2>
+        5,000 points
+    </h2>
+
+
+    <p>
+        At 5,000 measurement points,
+        our approximation follows the
+        coastline in much greater detail.
+    </p>
+
+
+    <div
+        class="number"
+        data-distance>
+        —
+    </div>
+
+
+    <div class="points">
+        5,000 measurement points
+    </div>
+
+</section>
+
+
+
+<!-- =================================================
+     FINAL EXPLANATION
+================================================== -->
+
+<!-- =================================================
+     FINAL EXPLANATION
+================================================== -->
+
+<section
+    class="step final">
+
+    <h2>
+        So how long is Great Britain's
+        coastline?
+    </h2>
+
+
+    <p>
+        There isn't a single simple answer.
+    </p>
+
+
+    <p>
+        For instance, if you isolate strictly the mainland island of Great Britain (excluding the Hebrides, Orkney, Shetland, Anglesey, the Isle of Wight, etc.), the official Ordnance Survey length is approximately <strong>11,073 km (6,881 miles)</strong>.
+    </p>
+
+
+    <p>
+        This measurement uses the <strong>Mean High Water (MHW)</strong> mark — the average level reached by the sea at high tide — which includes tracing the tidal boundaries of rivers and estuaries as far inland as the tide reaches.
+    </p>
+
+
+    <p>
+        Why does this number vary so much from simpler measurements? Because the smaller the measuring interval, the more of the coastline's tiny irregularities we capture — and the longer the measured coastline becomes.
+    </p>
+
+
+    <p>
+        This is known as the
+        <strong>coastline paradox</strong>.
+    </p>
+
+
+    <p>
+        The coastline isn't physically getting
+        longer. We're simply measuring more
+        of its complexity.
+    </p>
+
+
+    <p>
+        So where should we stop?
+    </p>
+
+
+    <p>
+        Should we measure every kilometre?
+        Every metre? Every centimetre?
+    </p>
+
+
+    <p>
+        At increasingly small scales, we begin
+        measuring rocks, pebbles and even grains
+        of sand.
+    </p>
+
+
+    <p>
+        <strong>
+            The answer depends on the scale
+            at which you choose to measure
+            the coastline.
+        </strong>
+    </p>
+
+</section>
+    <section class="step freeplay">
+
+    <h2>
+        Now try it yourself
+    </h2>
+
+    <p>
+        Choose your own number of measurement
+        points and see how the measured length
+        of Great Britain's coastline changes.
+    </p>
+
+    <div class="freeplay-distance" id="freeplay-distance">
+        —
+    </div>
+
+    <div class="freeplay-points" id="freeplay-points">
+        1,000 measurement points
+    </div>
+
+    <input
+    type="range"
+    id="freeplay-slider"
+    min="10"
+    max="4000"
+    value="1000"
+    step="10"
+>
+
+    <div class="slider-labels">
+    <span>10 points</span>
+    <span>4,000 points</span>
+</div>
+
+</section>
+
+</div>
+
+</div>
+
+
+
+<script>
+
+
+// =====================================================
+// GLOBAL VARIABLES
+// =====================================================
+
+let coastlineCoordinates = [];
+
+let coastlineLine;
+
+let projection;
+
+let svg;
+
+
+// =====================================================
+// LOAD GEOJSON
+// =====================================================
+
+fetch("https://mapsmania.github.io/jointhedots/gb.geojson")
+
+.then(response => {
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Could not load gb.geojson"
+        );
+
+    }
+
+    return response.json();
+
+})
+
+
+.then(data => {
+
+    console.log(
+        "GeoJSON:",
+        data
+    );
+
+
+    let geometry;
+
+
+    // FeatureCollection
+
+    if (
+        data.type ===
+        "FeatureCollection"
+    ) {
+
+        geometry =
+            data.features[0].geometry;
+
+    }
+
+
+    // Feature
+
+    else if (
+        data.type ===
+        "Feature"
+    ) {
+
+        geometry =
+            data.geometry;
+
+    }
+
+
+    // Polygon
+
+    else if (
+        data.type ===
+        "Polygon"
+    ) {
+
+        geometry = data;
+
+    }
+
+
+    else {
+
+        throw new Error(
+            "Unsupported GeoJSON type: " +
+            data.type
+        );
+
+    }
+
+
+    if (
+        geometry.type !==
+        "Polygon"
+    ) {
+
+        throw new Error(
+            "Expected Polygon, got " +
+            geometry.type
+        );
+
+    }
+
+
+    // Get outer ring
+
+    coastlineCoordinates =
+        geometry.coordinates[0];
+
+
+    // Remove duplicate final point
+
+    if (
+
+        coastlineCoordinates.length > 1 &&
+
+        coastlineCoordinates[0][0] ===
+        coastlineCoordinates[
+            coastlineCoordinates.length - 1
+        ][0] &&
+
+        coastlineCoordinates[0][1] ===
+        coastlineCoordinates[
+            coastlineCoordinates.length - 1
+        ][1]
+
+    ) {
+
+        coastlineCoordinates.pop();
+
+    }
+
+
+    // Create closed Turf LineString
+
+    coastlineLine =
+        turf.lineString([
+
+            ...coastlineCoordinates,
+
+            coastlineCoordinates[0]
+
+        ]);
+
+
+    console.log(
+        "Coastline points:",
+        coastlineCoordinates.length
+    );
+
+
+    initialiseSVG();
+
+updateAllDistances();
+
+drawActualCoastline();
+
+updateVisualization(50);
+
+initialiseScrollObserver();
+
+initialiseFreeplay();
+
+})
+
+
+.catch(error => {
+
+    console.error(error);
+
+});
+
+
+// =====================================================
+// INITIALISE SVG PROJECTION
+// =====================================================
+
+function initialiseSVG() {
+    svg = document.getElementById("map");
+
+    const bbox = turf.bbox(coastlineLine);
+
+    const minX = bbox[0];
+    const minY = bbox[1];
+    const maxX = bbox[2];
+    const maxY = bbox[3];
+
+    const width = 1000;
+    const height = 650;
+    const padding = 50;
+
+    const geographicWidth = maxX - minX;
+    const geographicHeight = maxY - minY;
+
+    const scale = Math.min(
+        (width - padding * 2) / geographicWidth,
+        (height - padding * 2) / geographicHeight
+    );
+
+    // Calculate actual pixel width of the scaled geometry
+    const projectedWidth = geographicWidth * scale;
+
+    // Center horizontally by calculating dynamic left offset
+    const xOffset = (width - projectedWidth) / 2;
+
+    projection = function(coord) {
+        const x = xOffset + (coord[0] - minX) * scale;
+
+        const y = height - padding - (coord[1] - minY) * scale;
+
+        return [x, y];
+    };
+}
+
+// =====================================================
+// CONVERT COORDINATES TO SVG PATH
+// =====================================================
+
+function coordinatesToPath(
+    coordinates
+) {
+
+    return coordinates
+
+        .map(
+            (coord, index) => {
+
+                const point =
+                    projection(coord);
+
+
+                return (
+
+                    index === 0
+                        ? "M "
+                        : "L "
+
+                ) +
+
+                point[0] +
+                " " +
+                point[1];
+
+            }
+        )
+
+        .join(" ");
+
+}
+
+
+// =====================================================
+// DRAW ORIGINAL COASTLINE
+// =====================================================
+
+function drawActualCoastline() {
+
+    const path =
+        document.createElementNS(
+
+            "http://www.w3.org/2000/svg",
+
+            "path"
+
+        );
+
+
+    path.setAttribute(
+        "id",
+        "actual-coastline"
+    );
+
+
+    path.setAttribute(
+        "class",
+        "actual-coastline"
+    );
+
+
+    path.setAttribute(
+
+        "d",
+
+        coordinatesToPath([
+
+            ...coastlineCoordinates,
+
+            coastlineCoordinates[0]
+
+        ])
+
+    );
+
+
+    svg.appendChild(path);
+
+}
+
+
+// =====================================================
+// CREATE MEASUREMENT POINTS
+// =====================================================
+
+function createMeasurementPoints(
+    pointCount
+) {
+
+    const totalLength =
+        turf.length(
+
+            coastlineLine,
+
+            {
+                units:
+                    "kilometers"
+            }
+
+        );
+
+
+    const points = [];
+
+
+    for (
+        let i = 0;
+        i < pointCount;
+        i++
+    ) {
+
+        const distance =
+
+            (totalLength * i) /
+            pointCount;
+
+
+        const point =
+
+            turf.along(
+
+                coastlineLine,
+
+                distance,
+
+                {
+                    units:
+                        "kilometers"
+                }
+
+            );
+
+
+        points.push(
+
+            point.geometry.coordinates
+
+        );
+
+    }
+
+
+    return points;
+
+}
+
+
+// =====================================================
+// MEASURE COASTLINE
+// =====================================================
+
+function measureCoastline(
+    points
+) {
+
+    let distance = 0;
+
+
+    for (
+        let i = 0;
+        i < points.length;
+        i++
+    ) {
+
+        const a =
+            points[i];
+
+
+        const b =
+            points[
+                (i + 1) %
+                points.length
+            ];
+
+
+        distance +=
+
+            turf.distance(
+
+                a,
+                b,
+
+                {
+                    units:
+                        "kilometers"
+                }
+
+            );
+
+    }
+
+
+    return distance;
+
+}
+
+
+// =====================================================
+// UPDATE ALL DISTANCE FIGURES
+// =====================================================
+
+function updateAllDistances() {
+
+    document
+        .querySelectorAll(
+            ".step[data-points]"
+        )
+        .forEach(step => {
+
+            const count =
+                Number(
+                    step.dataset.points
+                );
+
+
+            const points =
+                createMeasurementPoints(
+                    count
+                );
+
+
+            const distance =
+                measureCoastline(
+                    points
+                );
+
+
+            const element =
+                step.querySelector(
+                    "[data-distance]"
+                );
+
+
+            if (element) {
+
+                element.innerText =
+
+                    Math.round(
+                        distance
+                    ).toLocaleString() +
+
+                    " km";
+
+            }
+
+        });
+
+}
+
+
+// =====================================================
+// DRAW MEASUREMENT LINE
+// =====================================================
+
+function drawMeasurementLine(
+    points
+) {
+
+    const old =
+        document.getElementById(
+            "measurement-line"
+        );
+
+
+    if (old) {
+
+        old.remove();
+
+    }
+
+
+    const path =
+        document.createElementNS(
+
+            "http://www.w3.org/2000/svg",
+
+            "path"
+
+        );
+
+
+    path.setAttribute(
+
+        "id",
+
+        "measurement-line"
+
+    );
+
+
+    path.setAttribute(
+
+        "class",
+
+        "measurement-line"
+
+    );
+
+
+    path.setAttribute(
+
+        "d",
+
+        coordinatesToPath([
+
+            ...points,
+
+            points[0]
+
+        ])
+
+    );
+
+
+    svg.appendChild(path);
+
+}
+
+
+// =====================================================
+// DRAW DOTS
+// =====================================================
+
+function drawDots(points) {
+
+    const old =
+        document.getElementById(
+            "measurement-dots"
+        );
+
+
+    if (old) {
+
+        old.remove();
+
+    }
+
+
+    const group =
+        document.createElementNS(
+
+            "http://www.w3.org/2000/svg",
+
+            "g"
+
+        );
+
+
+    group.setAttribute(
+        "id",
+        "measurement-dots"
+    );
+
+
+    points.forEach(coord => {
+
+        const point =
+            projection(coord);
+
+
+        const circle =
+            document.createElementNS(
+
+                "http://www.w3.org/2000/svg",
+
+                "circle"
+
+            );
+
+
+        circle.setAttribute(
+            "cx",
+            point[0]
+        );
+
+
+        circle.setAttribute(
+            "cy",
+            point[1]
+        );
+
+
+        circle.setAttribute(
+            "r",
+            2.5
+        );
+
+
+        circle.setAttribute(
+            "class",
+            "measurement-dot"
+        );
+
+
+        group.appendChild(
+            circle
+        );
+
+    });
+
+
+    svg.appendChild(group);
+
+}
+
+
+// =====================================================
+// UPDATE VISUALIZATION
+// =====================================================
+
+function updateVisualization(
+    pointCount,
+    showDots = true
+) {
+
+    const points =
+        createMeasurementPoints(
+            pointCount
+        );
+
+
+    drawMeasurementLine(
+        points
+    );
+
+
+    if (showDots) {
+
+        drawDots(points);
+
+    }
+    else {
+
+        const old =
+            document.getElementById(
+                "measurement-dots"
+            );
+
+        if (old) {
+            old.remove();
+        }
+
+    }
+
+}
+
+// =====================================================
+// SCROLL OBSERVER
+// =====================================================
+
+function initialiseScrollObserver() {
+
+    const steps =
+        document.querySelectorAll(
+            ".step[data-points]"
+        );
+
+
+    const observer =
+        new IntersectionObserver(
+
+            entries => {
+
+                entries.forEach(entry => {
+
+                    if (
+                        entry.isIntersecting
+                    ) {
+
+                        const pointCount =
+                            Number(
+                                entry.target
+                                    .dataset
+                                    .points
+                            );
+
+
+                        updateVisualization(
+                            pointCount
+                        );
+
+                    }
+
+                });
+
+            },
+
+            {
+
+                threshold: 0.55
+
+            }
+
+        );
+
+
+    steps.forEach(step => {
+
+        observer.observe(step);
+
+    });
+
+}
+
+// =====================================================
+// FREEPLAY SLIDER
+// =====================================================
+
+const freeplaySlider =
+    document.getElementById(
+        "freeplay-slider"
+    );
+
+
+const freeplayDistance =
+    document.getElementById(
+        "freeplay-distance"
+    );
+
+
+const freeplayPoints =
+    document.getElementById(
+        "freeplay-points"
+    );
+
+
+freeplaySlider.addEventListener(
+    "input",
+    function() {
+
+        const pointCount =
+            Number(
+                this.value
+            );
+
+
+        const points =
+            createMeasurementPoints(
+                pointCount
+            );
+
+
+        const distance =
+            measureCoastline(
+                points
+            );
+
+
+        updateVisualization(
+    pointCount,
+    false
+);
+
+
+        freeplayDistance.innerText =
+
+            Math.round(
+                distance
+            ).toLocaleString() +
+            " km";
+
+
+        freeplayPoints.innerText =
+
+            pointCount.toLocaleString() +
+            " measurement points";
+
+    }
+);
+
+
+// Initialise freeplay
+
+function initialiseFreeplay() {
+
+    const pointCount =
+        Number(
+            freeplaySlider.value
+        );
+
+
+    const points =
+        createMeasurementPoints(
+            pointCount
+        );
+
+
+    const distance =
+        measureCoastline(
+            points
+        );
+
+
+    freeplayDistance.innerText =
+
+        Math.round(
+            distance
+        ).toLocaleString() +
+        " km";
+
+
+    freeplayPoints.innerText =
+
+        pointCount.toLocaleString() +
+        " measurement points";
+
+}    
+
+</script>
+
+
+</body>
+
+</html>
