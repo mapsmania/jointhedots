@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -89,6 +88,85 @@ body {
 
     background: transparent;
 }
+
+#map {
+    transition: opacity 0.5s ease;
+}
+
+    
+
+/* =====================================================
+   FRACTAL VISUALISATION
+===================================================== */
+
+#fractal-container {
+    position: absolute;
+    inset: 0;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    background: #fafafa;
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: opacity 0.5s ease;
+}
+
+#fractal-container.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#fractal-map {
+
+    width: 85%;
+
+    height: 70%;
+
+}
+
+
+#fractal-path {
+
+    fill: none;
+
+    stroke: #111;
+
+    stroke-width: 2;
+
+}
+
+
+.fractal-title {
+
+    position: absolute;
+
+    top: 40px;
+
+    font-size: 26px;
+
+    font-weight: bold;
+
+}
+
+
+#fractal-caption {
+
+    position: absolute;
+
+    bottom: 50px;
+
+    text-align: center;
+
+    font-size: 18px;
+
+    color: #555;
+
+}    
 
 /* =====================================================
    SCROLLING STORY
@@ -380,7 +458,7 @@ body {
      MAP
 ================================================== -->
 
-<div id="map-container">
+    <div id="map-container">
 
     <svg
         id="map"
@@ -388,7 +466,30 @@ body {
         preserveAspectRatio="xMidYMid meet">
     </svg>
 
+
+    <div id="fractal-container">
+
+        <div class="fractal-title">
+            From Lines to Fractals
+        </div>
+
+        <svg
+            id="fractal-map"
+            viewBox="0 0 1000 650"
+            preserveAspectRatio="xMidYMid meet">
+
+            <path
+                id="fractal-path"
+            />
+
+        </svg>
+
+        <div id="fractal-caption"></div>
+
+    </div>
+
 </div>
+
 
 
 
@@ -404,7 +505,7 @@ body {
 ================================================== -->
 
 <section
-    class="step intro"
+    class="step intro map-step"
     data-points="50">
 
     <h1>
@@ -456,7 +557,7 @@ body {
 ================================================== -->
 
 <section
-    class="step"
+    class="step map-step"
     data-points="100">
 
     <h2>
@@ -477,6 +578,11 @@ body {
         smaller bays and headlands.
     </p>
 
+    <p>
+        You might have noticed that after increasing 
+        the number of measurement points our coastline 
+        has grown. It was 3,351 km long — but now it is 3,798 km long.
+    </p>
 
     <div
         class="number"
@@ -498,7 +604,7 @@ body {
 ================================================== -->
 
 <section
-    class="step"
+    class="step map-step"
     data-points="250">
 
     <h2>
@@ -507,7 +613,7 @@ body {
 
 
     <p>
-        Now we're using
+        Let's increase our measuring points from 100 to 
         <strong>250 measurement points</strong>.
     </p>
 
@@ -515,7 +621,7 @@ body {
     <p>
         As the points get closer together,
         the straight lines between them
-        capture more of the coastline's
+        capture even more of the coastline's
         irregularities.
     </p>
 
@@ -540,7 +646,7 @@ body {
 ================================================== -->
 
 <section
-    class="step"
+    class="step map-step"
     data-points="500">
 
     <h2>
@@ -582,7 +688,7 @@ body {
 ================================================== -->
 
 <section
-    class="step"
+    class="step map-step"
     data-points="1000">
 
     <h2>
@@ -617,53 +723,39 @@ body {
 
 </section>
 
-
-
 <!-- =================================================
      STEP 6
 ================================================== -->
 
 <section
-    class="step"
+    class="step map-step"
     data-points="2500">
 
     <h2>
         And it keeps growing
     </h2>
 
-
     <p>
-        We've now increased the resolution
-        to <strong>2,500 points</strong>.
+        We've now increased the resolution to <strong>2,500 points</strong>.
     </p>
 
-
     <p>
-        Yet Great Britain's coastline
-        hasn't changed.
+        Yet Great Britain's coastline hasn't changed — our measurement has.
     </p>
 
-
     <p>
-        <strong>
-            Our measurement has.
-        </strong>
+        In 1967, mathematician <strong>Benoit Mandelbrot</strong> analyzed this exact phenomenon in his famous paper, <em>"How Long Is the Coast of Britain?"</em>
     </p>
 
+    <p>
+        He realized coastlines exhibit <strong>self-similarity</strong>: repeating patterns of bays within bays and headlands within headlands, no matter how closely you zoom in.
+    </p>
 
-    <div
-        class="number"
-        data-distance>
-        —
-    </div>
+    <div class="number" data-distance>—</div>
 
-
-    <div class="points">
-        2,500 measurement points
-    </div>
+    <div class="points">2,500 measurement points</div>
 
 </section>
-
 
 
 <!-- =================================================
@@ -671,7 +763,7 @@ body {
 ================================================== -->
 
 <section
-    class="step"
+    class="step map-step"
     data-points="5000">
 
     <h2>
@@ -705,80 +797,98 @@ body {
      FINAL EXPLANATION
 ================================================== -->
 
-<!-- =================================================
-     FINAL EXPLANATION
-================================================== -->
-
-<section
-    class="step final">
+<section class="step final map-step">
 
     <h2>
-        So how long is Great Britain's
-        coastline?
+        So how long is Great Britain's coastline?
     </h2>
 
-
     <p>
-        There isn't a single simple answer.
+        There isn't a single, definitive answer.
     </p>
 
-
     <p>
-        For instance, if you isolate strictly the mainland island of Great Britain (excluding the Hebrides, Orkney, Shetland, Anglesey, the Isle of Wight, etc.), the official Ordnance Survey length is approximately <strong>11,073 km (6,881 miles)</strong>.
+        For instance, the official Ordnance Survey length for mainland Great Britain is approximately <strong>11,073 km (6,881 miles)</strong>. But that figure relies on standardizing the boundary at the <strong>Mean High Water (MHW)</strong> mark.
     </p>
 
-
     <p>
-        This measurement uses the <strong>Mean High Water (MHW)</strong> mark — the average level reached by the sea at high tide — which includes tracing the tidal boundaries of rivers and estuaries as far inland as the tide reaches.
+        In reality, the concept of a single coastline "line" is itself a human construct. Defining a boundary between sea and land requires picking a <strong>tidal datum</strong> — a reference level between high and low tide that is never flat relative to Earth's surface, and is in constant, dynamic flux.
     </p>
 
-
     <p>
-        Why does this number vary so much from simpler measurements? Because the smaller the measuring interval, the more of the coastline's tiny irregularities we capture — and the longer the measured coastline becomes.
+        Layer on top of that Mandelbrot's <strong>fractal geometry</strong>: coastlines don't behave like smooth 1D lines or flat 2D surfaces. Great Britain's coast squiggles so complexly across scales that it has a <strong>fractal dimension of roughly 1.25</strong>.
     </p>
 
-
     <p>
-        This is known as the
-        <strong>coastline paradox</strong>.
-    </p>
-
-
-    <p>
-        The coastline isn't physically getting
-        longer. We're simply measuring more
-        of its complexity.
-    </p>
-
-
-    <p>
-        So where should we stop?
-    </p>
-
-
-    <p>
-        Should we measure every kilometre?
-        Every metre? Every centimetre?
-    </p>
-
-
-    <p>
-        At increasingly small scales, we begin
-        measuring rocks, pebbles and even grains
-        of sand.
-    </p>
-
-
-    <p>
-        <strong>
-            The answer depends on the scale
-            at which you choose to measure
-            the coastline.
-        </strong>
+        Ultimately, a coastline isn't a static geometric object. Its length depends entirely on the tide you choose, the scale of your ruler, and how closely you dare to look.
     </p>
 
 </section>
-    <section class="step freeplay">
+    
+<section
+    class="step fractal-step"
+    data-fractal="line">
+
+    <h2>A simple line</h2>
+
+    <p>
+        A straight line is one-dimensional.
+    </p>
+
+</section>
+
+
+<section
+    class="step fractal-step"
+    data-fractal="squiggle">
+
+    <h2>But coastlines aren't straight</h2>
+
+    <p>
+        Add bays, headlands and irregularities,
+        and the line begins to occupy more space.
+    </p>
+
+</section>
+
+
+<section
+    class="step fractal-step"
+    data-fractal="koch">
+
+    <h2>Enter the fractal</h2>
+
+    <p>
+        Mandelbrot realised that coastlines can
+        reveal new complexity at every scale.
+    </p>
+
+    <p>
+        A fractal curve can have a dimension
+        somewhere between one and two.
+    </p>
+
+</section>
+
+
+<section
+    class="step fractal-step"
+    data-fractal="surface">
+
+    <h2>From lines to surfaces</h2>
+
+    <p>
+        A surface is two-dimensional.
+    </p>
+
+    <p>
+        A coastline sits somewhere between
+        these two extremes.
+    </p>
+
+</section>    
+    
+<section class="step freeplay map-step">    
 
     <h2>
         Now try it yourself
@@ -805,12 +915,12 @@ body {
     max="4000"
     value="1000"
     step="10"
->
+    >
 
     <div class="slider-labels">
-    <span>10 points</span>
-    <span>4,000 points</span>
-</div>
+        <span>10 points</span>
+        <span>4,000 points</span>
+    </div>
 
 </section>
 
@@ -978,15 +1088,19 @@ fetch("https://mapsmania.github.io/jointhedots/gb.geojson")
 
     initialiseSVG();
 
-updateAllDistances();
+    updateAllDistances();
 
-drawActualCoastline();
+    drawActualCoastline();
 
-updateVisualization(50);
+    updateVisualization(50);
 
-initialiseScrollObserver();
+    initialiseScrollObserver();
 
-initialiseFreeplay();
+    initialiseFractalObserver();
+
+    initialiseMapObserver();
+
+    initialiseFreeplay();
 
 })
 
@@ -1592,9 +1706,9 @@ freeplaySlider.addEventListener(
 
 
         updateVisualization(
-    pointCount,
-    false
-);
+            pointCount,
+            false
+        );
 
 
         freeplayDistance.innerText =
@@ -1651,8 +1765,448 @@ function initialiseFreeplay() {
 
 }    
 
-</script>
+// =====================================================
+// FRACTAL VISUALISATION
+// =====================================================
 
+function drawFractal(type) {
+
+    const path =
+        document.getElementById(
+            "fractal-path"
+        );
+
+    const caption =
+        document.getElementById(
+            "fractal-caption"
+        );
+
+
+    if (type === "line") {
+
+        path.setAttribute(
+            "d",
+            "M 100 325 L 900 325"
+        );
+
+        path.style.strokeWidth = "4";
+
+        caption.innerHTML =
+            "<strong>Dimension = 1</strong><br>" +
+            "A simple straight line";
+
+    }
+
+
+    else if (type === "squiggle") {
+
+        const points = [];
+
+        for (
+            let x = 100;
+            x <= 900;
+            x += 5
+        ) {
+
+            const y =
+                325 +
+
+                Math.sin(x / 35) * 35 +
+
+                Math.sin(x / 12) * 12;
+
+
+            points.push(
+                [x, y]
+            );
+
+        }
+
+
+        const d =
+            points
+                .map(
+                    (point, index) =>
+
+                        (index === 0
+                            ? "M "
+                            : "L "
+                        ) +
+
+                        point[0] +
+
+                        " " +
+
+                        point[1]
+                )
+                .join(" ");
+
+
+        path.setAttribute(
+            "d",
+            d
+        );
+
+        path.style.strokeWidth = "3";
+
+        caption.innerHTML =
+            "<strong>Dimension &gt; 1</strong><br>" +
+            "Add complexity and the line becomes longer";
+
+    }
+
+
+    else if (type === "koch") {
+
+        const points =
+            createKochCurve(
+                [100, 400],
+                [900, 400],
+                4
+            );
+
+
+        const d =
+            points
+                .map(
+                    (point, index) =>
+
+                        (index === 0
+                            ? "M "
+                            : "L "
+                        ) +
+
+                        point[0] +
+
+                        " " +
+
+                        point[1]
+                )
+                .join(" ");
+
+
+        path.setAttribute(
+            "d",
+            d
+        );
+
+        path.style.strokeWidth = "2";
+
+        caption.innerHTML =
+            "<strong>Dimension = 1.2619</strong><br>" +
+            "The Koch curve — a mathematical fractal";
+
+    }
+
+
+    else if (type === "surface") {
+
+        const points = [];
+
+        for (
+            let y = 100;
+            y <= 550;
+            y += 35
+        ) {
+
+            for (
+                let x = 100;
+                x <= 900;
+                x += 20
+            ) {
+
+                const row =
+                    Math.round(
+                        (y - 100) / 35
+                    );
+
+
+                const actualX =
+                    row % 2 === 0
+                        ? x
+                        : 1000 - x;
+
+
+                points.push(
+                    [actualX, y]
+                );
+
+            }
+
+        }
+
+
+        const d =
+            points
+                .map(
+                    (point, index) =>
+
+                        (index === 0
+                            ? "M "
+                            : "L "
+                        ) +
+
+                        point[0] +
+
+                        " " +
+
+                        point[1]
+                )
+                .join(" ");
+
+
+        path.setAttribute(
+            "d",
+            d
+        );
+
+        path.style.strokeWidth = "2";
+
+        caption.innerHTML =
+            "<strong>Dimension = 2</strong><br>" +
+            "A surface occupies two dimensions";
+
+    }
+} 
+
+// =====================================================
+// KOCH CURVE
+// =====================================================
+
+function createKochCurve(
+    start,
+    end,
+    depth
+) {
+
+    if (depth === 0) {
+
+        return [
+            start,
+            end
+        ];
+
+    }
+
+
+    const dx =
+        (end[0] - start[0]) / 3;
+
+
+    const dy =
+        (end[1] - start[1]) / 3;
+
+
+    const a = [
+
+        start[0] + dx,
+        start[1] + dy
+
+    ];
+
+
+    const b = [
+
+        start[0] + dx * 1.5 -
+        Math.sqrt(3) * dy / 2,
+
+        start[1] + dy * 1.5 +
+        Math.sqrt(3) * dx / 2
+
+    ];
+
+
+    const c = [
+
+        start[0] + dx * 2,
+        start[1] + dy * 2
+
+    ];
+
+
+    const p1 =
+        createKochCurve(
+            start,
+            a,
+            depth - 1
+        );
+
+
+    const p2 =
+        createKochCurve(
+            a,
+            b,
+            depth - 1
+        );
+
+
+    const p3 =
+        createKochCurve(
+            b,
+            c,
+            depth - 1
+        );
+
+
+    const p4 =
+        createKochCurve(
+            c,
+            end,
+            depth - 1
+        );
+
+
+    return [
+
+        ...p1.slice(0, -1),
+
+        ...p2.slice(0, -1),
+
+        ...p3.slice(0, -1),
+
+        ...p4
+
+    ];
+
+}
+    
+function showFractal() {
+
+    document
+        .getElementById("map")
+        .style.opacity = 0;
+
+
+    document
+        .getElementById("fractal-container")
+        .classList.add("active");
+
+}
+
+
+function showMap() {
+
+    document
+        .getElementById("map")
+        .style.opacity = 1;
+
+
+    document
+        .getElementById("fractal-container")
+        .classList.remove("active");
+
+}
+
+// =====================================================
+// FRACTAL SCROLL OBSERVER
+// =====================================================
+
+function initialiseFractalObserver() {
+
+    const fractalSteps =
+        document.querySelectorAll(
+            ".fractal-step"
+        );
+
+
+    const observer =
+        new IntersectionObserver(
+
+            entries => {
+
+                entries.forEach(
+                    entry => {
+
+                        if (
+                            entry.isIntersecting
+                        ) {
+
+                            const fractalType =
+                                entry.target.dataset.fractal;
+
+
+                            showFractal();
+
+
+                            drawFractal(
+                                fractalType
+                            );
+
+                        }
+
+                    }
+                );
+
+            },
+
+            {
+
+                threshold: 0.55
+
+            }
+
+        );
+
+
+    fractalSteps.forEach(step => {
+
+        observer.observe(step);
+
+    });
+
+}
+
+// =====================================================
+// MAP SCROLL OBSERVER (Toggles back from Fractal view)
+// =====================================================
+
+function initialiseMapObserver() {
+
+    const mapSteps =
+        document.querySelectorAll(
+            ".map-step"
+        );
+
+
+    const observer =
+        new IntersectionObserver(
+
+            entries => {
+
+                entries.forEach(
+                    entry => {
+
+                        if (
+                            entry.isIntersecting
+                        ) {
+
+                            showMap();
+
+                        }
+
+                    }
+                );
+
+            },
+
+            {
+
+                threshold: 0.55
+
+            }
+
+        );
+
+
+    mapSteps.forEach(step => {
+
+        observer.observe(step);
+
+    });
+
+}
+
+</script>
 
 </body>
 
