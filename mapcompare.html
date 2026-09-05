@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Equal Earth vs Web Mercator</title>
+
+  <script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
+  <link
+    href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css"
+    rel="stylesheet"
+  >
+
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #map {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #mercator,
+    #equal-earth {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* Equal Earth sits above the Mercator map */
+    #equal-earth {
+      clip-path: inset(0 50% 0 0);
+    }
+
+    .label {
+      position: absolute;
+      top: 10px;
+      z-index: 10;
+      padding: 6px 10px;
+      background: white;
+      font: bold 14px sans-serif;
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    #label-left {
+      left: 10px;
+    }
+
+    #label-right {
+      right: 10px;
+    }
+
+    /* -----------------------------------------------
+       Draggable divider
+       ----------------------------------------------- */
+
+    #divider {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 4px;
+      transform: translateX(-50%);
+      background: white;
+      z-index: 20;
+      cursor: ew-resize;
+    }
+
+    #handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 42px;
+      height: 42px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: white;
+      border: 2px solid #555;
+      box-sizing: border-box;
+      cursor: ew-resize;
+    }
+
+    #handle::before,
+    #handle::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 0;
+      height: 0;
+      border-top: 7px solid transparent;
+      border-bottom: 7px solid transparent;
+      transform: translateY(-50%);
+    }
+
+    #handle::before {
+      left: 8px;
+      border-right: 8px solid #555;
+    }
+
+    #handle::after {
+      right: 8px;
+      border-left: 8px solid #555;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="map">
+
+  <div id="mercator"></div>
+  <div id="equal-earth"></div>
+
+  <div id="label-left" class="label">Equal Earth</div>
+  <div id="label-right" class="label">Web Mercator</div>
+
+  <div id="divider">
+    <div id="handle"></div>
+  </div>
+
+</div>
+
+<script>
+
+  // --------------------------------------------------
+  // Equal Earth
+  // --------------------------------------------------
+
+  const equalEarth = new maplibregl.Map({
+    container: 'equal-earth',
+    style: 'https://equal.bbox.earth/natural-earth-countries-style.json',
+    center: [0, 20],
+    zoom: 1
+  });
+
+
+  // --------------------------------------------------
+  // Web Mercator / OpenFreeMap
+  // --------------------------------------------------
+
+  const mercator = new maplibregl.Map({
+    container: 'mercator',
+    style: 'https://tiles.openfreemap.org/styles/liberty',
+    center: [0, 20],
+    zoom: 1
+  });
+
+
+  // --------------------------------------------------
+  // Equal Earth scale correction
+  // --------------------------------------------------
+
+  const EQUAL_EARTH_SCALE = 1.162;
+  const ZOOM_ADJUSTMENT = Math.log2(EQUAL_EARTH_SCALE);
+
+
+  // --------------------------------------------------
+  // Synchronise the maps
+  // --------------------------------------------------
+
+  let updating = false;
+
+  function syncMaps(source, target) {
+
+    if (updating) return;
+
+    updating = true;
+
+    const center = source.getCenter();
+    let zoom = source.getZoom();
+
+    if (source === mercator && target === equalEarth) {
+      zoom += ZOOM_ADJUSTMENT;
+    }
+
+    if (source === equalEarth && target === mercator) {
+      zoom -= ZOOM_ADJUSTMENT;
+    }
+
+    target.jumpTo({
+      center: center,
+      zoom: zoom,
+      bearing: source.getBearing(),
+      pitch: source.getPitch()
+    });
+
+    updating = false;
+  }
+
+  equalEarth.on('move', () => {
+    syncMaps(equalEarth, mercator);
+  });
+
+  mercator.on('move', () => {
+    syncMaps(mercator, equalEarth);
+  });
+
+
+  // --------------------------------------------------
+  // Draggable divider
+  // --------------------------------------------------
+
+  const mapContainer = document.getElementById('map');
+  const equalMap = document.getElementById('equal-earth');
+  const divider = document.getElementById('divider');
+
+  let dragging = false;
+
+  function moveDivider(clientX) {
+
+    const rect = mapContainer.getBoundingClientRect();
+
+    let x = clientX - rect.left;
+
+    // Keep the divider inside the map
+    x = Math.max(0, Math.min(x, rect.width));
+
+    const percent = (x / rect.width) * 100;
+
+    divider.style.left = percent + '%';
+
+    equalMap.style.clipPath =
+      `inset(0 ${100 - percent}% 0 0)`;
+  }
+
+
+  divider.addEventListener('mousedown', function () {
+    dragging = true;
+  });
+
+
+  document.addEventListener('mousemove', function (e) {
+
+    if (!dragging) return;
+
+    moveDivider(e.clientX);
+
+  });
+
+
+  document.addEventListener('mouseup', function () {
+    dragging = false;
+  });
+
+
+  // --------------------------------------------------
+  // Touch support
+  // --------------------------------------------------
+
+  divider.addEventListener('touchstart', function (e) {
+
+    dragging = true;
+    e.preventDefault();
+
+  }, { passive: false });
+
+
+  document.addEventListener('touchmove', function (e) {
+
+    if (!dragging) return;
+
+    moveDivider(e.touches[0].clientX);
+
+  }, { passive: false });
+
+
+  document.addEventListener('touchend', function () {
+    dragging = false;
+  });
+
+</script>
+
+</body>
+</html>
