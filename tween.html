@@ -1,0 +1,256 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mercator vs Equal Earth</title>
+<style>
+  body { background:#111; color:#fff; font-family:sans-serif; margin:0; }
+  header { padding:10px; text-align:center; }
+  header span { margin:0 12px; cursor:pointer; color:#ccc; font-weight:bold; }
+  header span.active { color:#4CAF50; }
+
+  button {
+    background:#222;
+    color:#fff;
+    border:1px solid #4CAF50;
+    border-radius:6px;
+    padding:4px 10px;
+    margin:0 5px;
+    cursor:pointer;
+    font-size:14px;
+  }
+
+  button:hover { background:#333; }
+
+  svg { display:block; margin:auto; }
+
+  .label {
+    font-size:22px;
+    font-weight:600;
+    fill:#fff;
+    text-anchor:middle;
+  }
+
+  #meta-panel {
+    position:absolute;
+    bottom:15px;
+    left:15px;
+    background:rgba(0,0,0,0.45);
+    padding:12px 16px;
+    border-radius:8px;
+    font-size:14px;
+    line-height:1.4em;
+    max-width:280px;
+  }
+
+  #meta-panel b { color:#4CAF50; }
+</style>
+</head>
+
+<body>
+
+<br>
+
+<header id="proj-header">
+  <button id="pause-btn">Pause</button>
+  <button id="play-btn">Play</button>
+
+  <span data-proj="mercator" class="active">Mercator</span> -
+  <span data-proj="equalEarth">Equal Earth</span>
+</header>
+
+<br>
+
+<div id="meta-panel"></div>
+
+<svg id="map" width="960" height="520"></svg>
+
+<br>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://unpkg.com/topojson-client@3"></script>
+
+<script>
+(async function(){
+
+  const width = 960;
+  const height = 520;
+
+  const svg = d3.select("#map");
+  const g = svg.append("g");
+
+  const label = svg.append("text")
+    .attr("class","label")
+    .attr("x", width / 2)
+    .attr("y", height - 20);
+
+  const path = d3.geoPath();
+
+  const projectionInfo = {
+
+    mercator: {
+      type: "Cylindrical conformal",
+      preserves: "Shape (locally) & direction",
+      distortion: "Severe area distortion near the poles. Greenland appears huge."
+    },
+
+    equalEarth: {
+      type: "Pseudocylindrical equal-area",
+      preserves: "Area",
+      distortion: "Shapes are distorted, particularly towards the edges of the map."
+    }
+
+  };
+
+  const metaPanel = document.getElementById("meta-panel");
+
+  function setMetadata(name){
+
+    const info = projectionInfo[name];
+
+    const displayName =
+      name === "equalEarth" ? "Equal Earth" : "Mercator";
+
+    metaPanel.innerHTML = `
+      <b>${displayName}</b><br>
+      <b>Type:</b> ${info.type}<br>
+      <b>Preserves:</b> ${info.preserves}<br>
+      <b>Distortion:</b> ${info.distortion}
+    `;
+  }
+
+  const projections = ["mercator", "equalEarth"];
+
+  let currentIndex = 0;
+
+  function makeProjection(name){
+
+    const s = 150;
+    const c = [width / 2, height / 2];
+
+    switch(name){
+
+      case "mercator":
+        return d3.geoMercator()
+          .scale(s)
+          .translate(c);
+
+      case "equalEarth":
+        return d3.geoEqualEarth()
+          .scale(s)
+          .translate(c);
+
+      default:
+        return d3.geoMercator()
+          .scale(s)
+          .translate(c);
+    }
+  }
+
+  const topo = await d3.json(
+    "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
+  );
+
+  const countries =
+    topojson.feature(topo, topo.objects.countries).features;
+
+  g.selectAll("path")
+    .data(countries)
+    .join("path")
+    .attr("fill","#4CAF50")
+    .attr("stroke","#111")
+    .attr("stroke-width",0.4);
+
+  function updateProjection(projName){
+
+    const proj = makeProjection(projName);
+
+    path.projection(proj);
+
+    g.selectAll("path")
+      .transition()
+      .duration(1000)
+      .attr("d", path);
+
+    const displayName =
+      projName === "equalEarth" ? "Equal Earth" : "Mercator";
+
+    label.text(displayName);
+
+    setMetadata(projName);
+
+    d3.selectAll("#proj-header span").each(function(){
+
+      this.classList.toggle(
+        "active",
+        this.dataset.proj === projName
+      );
+
+    });
+  }
+
+  function nextProjection(){
+
+    currentIndex =
+      (currentIndex + 1) % projections.length;
+
+    updateProjection(projections[currentIndex]);
+  }
+
+  // Header click handlers
+
+  d3.selectAll("#proj-header span")
+    .on("click", function(){
+
+      const projName = this.dataset.proj;
+
+      currentIndex =
+        projections.indexOf(projName);
+
+      updateProjection(projName);
+    });
+
+  // Pause / Play Logic
+
+  let interval =
+    d3.interval(() => nextProjection(), 2500);
+
+  let isPaused = false;
+
+  document.getElementById("pause-btn")
+    .addEventListener("click", () => {
+
+      if (!isPaused){
+
+        interval.stop();
+        isPaused = true;
+
+      }
+
+    });
+
+  document.getElementById("play-btn")
+    .addEventListener("click", () => {
+
+      if (isPaused){
+
+        interval =
+          d3.interval(() => nextProjection(), 2500);
+
+        isPaused = false;
+
+      }
+
+    });
+
+  // Initial projection
+
+  updateProjection(projections[currentIndex]);
+
+})();
+</script>
+
+</body>
+</html>
+
