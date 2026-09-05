@@ -33,16 +33,17 @@
   }
 
   #meta-panel {
-    position:absolute;
-    bottom:15px;
-    left:15px;
-    background:rgba(0,0,0,0.45);
-    padding:12px 16px;
-    border-radius:8px;
-    font-size:14px;
-    line-height:1.4em;
-    max-width:280px;
-  }
+  position:absolute;
+  bottom:15px;
+  left:15px;
+  background:#111;
+  padding:12px 16px;
+  border-radius:8px;
+  font-size:14px;
+  line-height:1.4em;
+  max-width:280px;
+  z-index:10;
+}
 
   #meta-panel b { color:#4CAF50; }
 </style>
@@ -80,10 +81,17 @@
   const svg = d3.select("#map");
   const g = svg.append("g");
 
-  const label = svg.append("text")
-    .attr("class","label")
-    .attr("x", width / 2)
-    .attr("y", height - 20);
+  const labelBackground = svg.append("rect")
+  .attr("x", 0)
+  .attr("y", height - 55)
+  .attr("width", width)
+  .attr("height", 55)
+  .attr("fill", "#111");
+
+const label = svg.append("text")
+  .attr("class","label")
+  .attr("x", width / 2)
+  .attr("y", height - 20);
 
   const path = d3.geoPath();
 
@@ -126,30 +134,33 @@
 
   function makeProjection(name){
 
-    const s = 150;
+  const s = 150;
 
-    // Move the map 25px down
-    const c = [width / 2, 305];
+  // Different vertical positions for each projection
+  const c = [
+    width / 2,
+    name === "equalEarth" ? 290 : 305
+  ];
 
-    switch(name){
+  switch(name){
 
-      case "mercator":
-        return d3.geoMercator()
-          .scale(s)
-          .translate(c);
+    case "mercator":
+      return d3.geoMercator()
+        .scale(s)
+        .translate(c);
 
-      case "equalEarth":
-        return d3.geoEqualEarth()
-          .scale(s)
-          .translate(c);
+    case "equalEarth":
+      return d3.geoEqualEarth()
+        .scale(s)
+        .translate(c);
 
-      default:
-        return d3.geoMercator()
-          .scale(s)
-          .translate(c);
-    }
+    default:
+      return d3.geoMercator()
+        .scale(s)
+        .translate(c);
   }
-
+}
+    
   const topo = await d3.json(
     "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
   );
